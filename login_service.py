@@ -7,14 +7,20 @@ from logger import LoggerFactory
 
 logger = LoggerFactory.get_logger(__name__)
 
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
+
 BASE_URL = "https://login.bit.edu.cn"
 LOGIN_URL = f"{BASE_URL}/authserver/login"
 
 class LoginService:
     def __init__(self, service_url: str):
         self.service_url = service_url
-        self.session = requests.Session()
         self.error_pattern = re.compile(r'<span id="showErrorTip"><span>(.*?)</span>')
+        self.session = requests.Session()
+        self.session.headers.update(headers)
+        self.session.verify = False
         self.ocr = ddddocr.DdddOcr(show_ad=False)
     def _get_html_error(self, html: str) -> str:
         match = self.error_pattern.search(html)
