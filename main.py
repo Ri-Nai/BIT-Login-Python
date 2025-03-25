@@ -15,12 +15,18 @@ if __name__ == "__main__":
     username = None
     password = None
     callback_url = None
+    try:
+        with open("settings.json", "r") as f:
+            settings = json.load(f)
+            username = settings["username"]
+            password = settings["password"]
+            try:
+                callback_url = settings["callback_url"]
+            except:
+                callback_url = None
+    except Exception as e:
+        logger.error(f"读取配置文件失败: {e}")
 
-    with open("settings.json", "r") as f:
-        settings = json.load(f)
-        username = settings["username"]
-        password = settings["password"]
-        callback_url = settings["callback_url"]
 
     if username is None:
         username = input("请输入学号: ")
