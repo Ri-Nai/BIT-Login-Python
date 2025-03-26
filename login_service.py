@@ -1,7 +1,6 @@
 import re
 import requests
 import ddddocr
-from bs4 import BeautifulSoup
 from aes_util import encrypt_password
 from logger import LoggerFactory, LogParser
 
@@ -17,13 +16,18 @@ LOGIN_URL = f"{BASE_URL}/authserver/login"
 class LoginService:
     def __init__(self, service_url: str):
         self.service_url = service_url
-        self.error_pattern = re.compile(r'<span id="showErrorTip"><span>(.*?)</span>')
         self.session = requests.Session()
         self.session.headers.update(headers)
         self.session.verify = False
+        self.login_params = {}
         self.ocr = ddddocr.DdddOcr(show_ad=False)
+
+        self._error_pattern = re.compile(r'<span id="showErrorTip"><span>(.*?)</span>')
+        self._execution_pattern = re.compile(r'<input type="hidden" id="execution" name="execution" value="(.*?)"(.*?)>')
+        self._pwd_encrypt_salt_pattern = re.compile(r'<input type="hidden" id="pwdEncryptSalt" value="(.*?)"(.*?)>')
+    
     def _get_html_error(self, html: str) -> str:
-        match = self.error_pattern.search(html)
+        match = self._error_pattern.search(html)
         return match.group(1) if match else ""
 
     def _get_login_params(self) -> tuple[str, str]:
@@ -34,15 +38,15 @@ class LoginService:
             )
             if not response.ok:
                 raise RuntimeError(f"获取登录页面失败: {response.status_code}")
-
-            soup = BeautifulSoup(response.text, "html.parser")
-            form = soup.find(id="pwdFromId")
-            if not form:
-                raise RuntimeError("找不到登录表单")
-
-            execution = form.find(attrs={"name": "execution"}).get("value")
-            pwd_encrypt_salt = soup.find(id="pwdEncryptSalt").get("value")
-            return execution, pwd_encrypt_salt
+            html = response.text
+            try:
+                execution = self._execution_pattern.search(html).group(1)
+                print(f"execution: {execution}")
+                pwd_encrypt_salt = self._pwd_encrypt_salt_pattern.search(html).group(1)
+                print(f"pwd_encrypt_salt: {pwd_encrypt_salt}")
+                return execution, pwd_encrypt_salt
+            except Exception as e:
+                raise RuntimeError("找不到登录参数")
 
         except Exception as e:
             logger.error(f"获取登录参数失败: {str(e)}")
@@ -120,10 +124,8 @@ class LoginService:
             if not response.ok:
                 logger.error(f"会话验证失败: {response.status_code}")
                 return False
-
-            soup = BeautifulSoup(response.text, "html.parser")
-            pwd_form = soup.find(id="pwdFromId")
-            return pwd_form is None
+            pwd_encrypt_salt_match = self._pwd_encrypt_salt_pattern.search(response.text)
+            return pwd_encrypt_salt_match is not None
 
         except Exception as e:
             logger.error(f"会话验证异常: {str(e)}")
@@ -133,6 +135,7 @@ class LoginService:
         return self.session.cookies.get_dict()
 
     def get_params(self) -> dict:
-        return LogParser.get_params_from_log_entries(
+        self.login_params = LogParser.get_params_from_log_entries(
             LoggerFactory.get_root_logger_logs()
         )
+        return self.login_params
