@@ -57,7 +57,9 @@ cookies = login_service.get_cookies()
 ## ⚠️ 注意事项
 
 - 请妥善保管你的账号密码信息
-- 验证码图片会临时保存在 `captcha.jpg` 文件中
+- 验证码图片会临时保存在 `output/captcha.jpg` 文件中
+- 登录参数会临时保存在 `output/params.json` 文件中
+- 登录会话 Cookie 会临时保存在 `output/cookies.json` 文件中
 
 ## 📌 依赖项
 
