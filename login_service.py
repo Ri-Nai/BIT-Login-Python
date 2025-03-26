@@ -3,7 +3,7 @@ import requests
 import ddddocr
 from bs4 import BeautifulSoup
 from aes_util import encrypt_password
-from logger import LoggerFactory
+from logger import LoggerFactory, LogParser
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -67,7 +67,7 @@ class LoginService:
             if not response.ok:
                 raise RuntimeError(f"获取验证码失败: {response.status_code}")
 
-            with open("captcha.jpg", "wb") as f:
+            with open("output/captcha.jpg", "wb") as f:
                 f.write(response.content)
             logger.info("验证码图片已保存为captcha.jpg")
 
@@ -132,5 +132,7 @@ class LoginService:
     def get_cookies(self) -> dict:
         return self.session.cookies.get_dict()
 
-
-
+    def get_params(self) -> dict:
+        return LogParser.get_params_from_log_entries(
+            LoggerFactory.get_root_logger_logs()
+        )

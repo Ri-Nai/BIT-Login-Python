@@ -5,10 +5,10 @@ from logger import LoggerFactory
 logger = LoggerFactory.get_logger(__name__)
 
 
-def login(username, password, callback_url) -> dict:
+def login(username, password, callback_url) -> tuple[dict, dict]:
     login_service = LoginService(callback_url)
     login_service.login(username, password)
-    return login_service.get_cookies()
+    return login_service.get_cookies(), login_service.get_params()
 
 
 if __name__ == "__main__":
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         password = input("请输入密码: ")
 
     try:
-        cookies = login(username, password, callback_url)
+        cookies, params = login(username, password, callback_url)
 
         with open("settings.json", "w") as f:
             json.dump(
@@ -46,10 +46,11 @@ if __name__ == "__main__":
                 f,
                 indent=4,
             )
-        # save cookies to file
-        with open("cookies.json", "w") as f:
+        with open("output/cookies.json", "w") as f:
             json.dump(cookies, f, indent=4)
+        with open("output/params.json", "w") as f:
+            json.dump(params, f, indent=4)
+        logger.info("登录成功")
     except Exception as e:
         logger.error(f"登录失败: {e}")
         exit(1)
-

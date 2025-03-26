@@ -1,6 +1,7 @@
 __pycache__
+output
+captcha.jpg
 settings.json
-cookies.json
 *.pyc
 
-captcha.jpg
+*tmp*
