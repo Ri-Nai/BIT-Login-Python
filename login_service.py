@@ -1,7 +1,7 @@
 import re
 import requests
 import ddddocr
-from aes_util import encrypt_password
+from aes_util import encrypt_password_new
 from logger import LoggerFactory, LogParser
 
 logger = LoggerFactory.get_logger(__name__)
@@ -10,8 +10,9 @@ headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-BASE_URL = "https://login.bit.edu.cn"
-LOGIN_URL = f"{BASE_URL}/authserver/login"
+BASE_URL = "https://sso.bit.edu.cn"
+LOGIN_URL = f"{BASE_URL}/cas/login"
+
 
 class LoginService:
     def __init__(self, service_url: str):
@@ -23,22 +24,25 @@ class LoginService:
         self.ocr = ddddocr.DdddOcr(show_ad=False)
 
         self._error_pattern = re.compile(r'<span id="showErrorTip"><span>(.*?)</span>')
-        self._execution_pattern = re.compile(r'<input type="hidden" id="execution" name="execution" value="(.*?)"(.*?)>')
-        self._pwd_encrypt_salt_pattern = re.compile(r'<input type="hidden" id="pwdEncryptSalt" value="(.*?)"(.*?)>')
-    
+        self._execution_pattern = re.compile(
+            r'<p\s+id="login-page-flowkey"[^>]*>([^<]+)<\/p>'
+        )
+        self._pwd_encrypt_salt_pattern = re.compile(
+            r'<p\s+id="login-croypto"[^>]*>([^<]+)<\/p>'
+        )
+
     def _get_html_error(self, html: str) -> str:
         match = self._error_pattern.search(html)
         return match.group(1) if match else ""
 
     def _get_login_params(self) -> tuple[str, str]:
         try:
-            response = self.session.get(
-                LOGIN_URL,
-                params={"service": self.service_url}
-            )
+            response = self.session.get(LOGIN_URL, params={"service": self.service_url})
             if not response.ok:
                 raise RuntimeError(f"获取登录页面失败: {response.status_code}")
             html = response.text
+            with open("output/login.html", "w", encoding="utf-8") as f:
+                f.write(html)
             try:
                 execution = self._execution_pattern.search(html).group(1)
                 print(f"execution: {execution}")
@@ -52,9 +56,10 @@ class LoginService:
             logger.error(f"获取登录参数失败: {str(e)}")
             raise
 
+    """
     def check_need_captcha(self, username: str) -> bool:
         response = self.session.get(
-            f"{BASE_URL}/authserver/checkNeedCaptcha.htl",
+            f"{BASE_URL}/cas/checkNeedCaptcha.htl",
             params={"username": username}
         )
         if response.text == '{"isNeed":true}':
@@ -66,7 +71,7 @@ class LoginService:
     def _get_captcha(self) -> str:
         try:
             response = self.session.get(
-                f"{BASE_URL}/authserver/getCaptcha.htl",
+                f"{BASE_URL}/cas/getCaptcha.htl",
             )
             if not response.ok:
                 raise RuntimeError(f"获取验证码失败: {response.status_code}")
@@ -82,23 +87,27 @@ class LoginService:
             logger.error(f"获取验证码异常: {str(e)}")
             raise e
 
+    """
+
     def login(self, username: str, password: str) -> bool:
         try:
             execution, pwd_salt = self._get_login_params()
-            encrypted_pwd = encrypt_password(password, pwd_salt)
+            encrypted_pwd = encrypt_password_new(password, pwd_salt)
             captcha = ""
+            """
             if self.check_need_captcha(username):
                 captcha = self._get_captcha()
+            """
             data = {
                 "username": username,
                 "password": encrypted_pwd,
                 "execution": execution,
-                "captcha": captcha,
+                "croypto": pwd_salt,
+                "captcha_payload": encrypt_password_new("{}", pwd_salt),
                 "_eventId": "submit",
-                "cllt": "userNameLogin",
-                "dllt": "generalLogin",
-                "lt": "",
-                "rememberMe": "true",
+                "type": "UsernamePassword",
+                "geolocation": "",
+                "captcha_code": captcha,
                 "service": self.service_url,
             }
 
@@ -124,7 +133,9 @@ class LoginService:
             if not response.ok:
                 logger.error(f"会话验证失败: {response.status_code}")
                 return False
-            pwd_encrypt_salt_match = self._pwd_encrypt_salt_pattern.search(response.text)
+            pwd_encrypt_salt_match = self._pwd_encrypt_salt_pattern.search(
+                response.text
+            )
             return pwd_encrypt_salt_match is not None
 
         except Exception as e:

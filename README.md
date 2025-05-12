@@ -4,8 +4,8 @@
 
 ## ✨ 功能特性
 
-- 支持北京理工大学统一身份认证系统登录
-- 自动处理验证码识别
+- 支持北京理工大学统一身份认证系统登录（已支持 2025.5.10 更新后的统一身份认证系统）
+- 自动处理验证码识别（暂时未实现新版的）
 - 提供登录会话 Cookie 获取
 - 支持配置文件方式设置登录信息
 
@@ -64,7 +64,6 @@ cookies = login_service.get_cookies()
 ## 📌 依赖项
 
 - `requests`
-- `beautifulsoup4`
 - `ddddocr`
 - `pycryptodome`
 
@@ -77,7 +76,7 @@ cookies = login_service.get_cookies()
 - [BITLogin-Node](https://github.com/BIT-BOBH/BITLogin-Node)
 - [BIT101-Android](https://github.com/BIT101-Dev/BIT101-Android)
 - [BIT101-GO](https://github.com/BIT101-Dev/BIT101-GO)
-
+- [NylteJ's PR](https://github.com/BIT101-dev/BIT101-Android/pull/14/commits/4ebe751bfdf650d3aac8e23c50dc4a073e623cee)
 ## ☕ Kotlin 版本
 
 [iBitChatKotlin](https://github.com/Ri-Nai/iBitChatKotlin/) 中 `LoginService` / `LoginApi` 等模块的实现，可以参考。
